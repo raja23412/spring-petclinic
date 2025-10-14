@@ -1,6 +1,6 @@
 pipeline {
     agent {
-        lable 'JAVAAPP'
+        label 'JAVAAPP'
     }
     stages {
         stage('git checkout'){
