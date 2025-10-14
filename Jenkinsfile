@@ -1,59 +1,70 @@
+
 pipeline {
-    agent {
-        label 'JAVAAPP'
-    }
+    agent { label 'JAVAAPP' }
+
     stages {
-        stage('git checkout'){
-            steps{
-                git url: 'https://github.com/raja23412/spring-petclinic.git',
-                branch: 'main'
+
+        stage('Git Checkout') {
+            steps {
+                git branch: 'main',
+                    url: 'https://github.com/raja23412/spring-petclinic.git'
             }
         }
-        stage('build and scan'){
-            steps{
+
+        stage('Build and Sonar Scan') {
+            steps {
                 withCredentials([string(credentialsId: 'sonar_id', variable: 'SONAR_TOKEN')]) {
-                  withSonarQubeEnv('SONARQUBE') {
-                sh '''
-                       mvn clean verify sonar:sonar \
-                      -Dsonar.projectKey=raja23412_spring-petclinic \
-                      -Dsonar.organization=rajajenkins \
-                      -Dsonar.host.url=https://sonarcloud.io \
-                      -Dsonar.login=$SONAR_TOKEN
-                     '''
-                  }
+                    withSonarQubeEnv('SONARQUBE') {
+                        sh '''
+                            mvn clean verify sonar:sonar \
+                              -Dsonar.projectKey=raja23412_spring-petclinic \
+                              -Dsonar.organization=rajajenkins \
+                              -Dsonar.host.url=https://sonarcloud.io \
+                              -Dsonar.login=$SONAR_TOKEN
+                        '''
+                    }
                 }
             }
-            stage('upload jfrog') {
-                steps {
-                    rtupload (
-                        serverId: 'JFROG_ID_JAVA',
-                        spec: '''{
-                              "files": [
-                                {
+        }
+
+        stage('Quality Gate') {
+            steps {
+                timeout(time: 5, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: true
+                }
+            }
+        }
+
+        stage('Upload to JFrog') {
+            steps {
+                rtUpload (
+                    serverId: 'JFROG_ID_JAVA',
+                    spec: '''{
+                        "files": [
+                            {
                                 "pattern": "target/*.jar",
-                                "target": "jfrogjavaspc-libs-release/"
-                                }
-                            ]
-                        }''',
-                    )
-                    rtPublishBuildInfo (
-                        serverId: 'JFROG_ID_JAVA',
-                    )
-                }
+                                "target": "jfrogjavaspc-libs-release-local/"
+                            }
+                        ]
+                    }'''
+                )
+                rtPublishBuildInfo (
+                    serverId: 'JFROG_ID_JAVA'
+                )
             }
-              post {
+        }
+    }
+
+    post {
         always { 
             archiveArtifacts artifacts: '**/target/*.jar'
             junit '**/target/surefire-reports/*.xml'
-          } 
+        } 
         success {
-            echo 'this pipeline good'
+            echo 'Pipeline executed successfully!'
         }   
         failure {
-           echo 'this is waste pipeline'
+            echo 'Pipeline failed. Please check logs.'
         }      
-    }
-
-        }
     }
 }
