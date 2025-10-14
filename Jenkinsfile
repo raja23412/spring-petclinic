@@ -1,7 +1,11 @@
 
 pipeline {
-    agent { label 'JAVAAPP' }
-
+    agent {
+         label 'JAVAAPP'
+          }
+           triggers {
+       pollSCM('* * * * *')
+    }
     stages {
 
         stage('Git Checkout') {
