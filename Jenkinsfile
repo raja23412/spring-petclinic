@@ -38,6 +38,13 @@ pipeline {
                 }
             }
         }
+          stage('Quality Gate') {
+            steps {
+                timeout(time: 15, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: true
+                }
+            }
+        }
 
         stage('Upload to JFrog') {
             steps {
@@ -50,13 +57,15 @@ pipeline {
                                 "target": "jfrogjavaspc-libs-release-local/"
                             }
                         ]
-                    }'''
+                    }
+                    '''
                 )
                 rtPublishBuildInfo (
                     serverId: 'JFROG_ID_JAVA'
                 )
             }
         }
+
     }
 
     post {
